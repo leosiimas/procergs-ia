@@ -1,0 +1,54 @@
+# Base image with TensorFlow GPU support
+FROM tensorflow/tensorflow:2.10.1-gpu
+
+# Remove conflicting CUDA repository if present
+RUN rm -f /etc/apt/sources.list.d/cuda.list
+
+# Update package list and install system dependencies in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip \
+    graphviz \
+    curl \
+    musescore3 \
+    openjdk-11-jdk \
+    xvfb \
+    x11vnc \
+    xfce4 \
+    novnc \
+    wget \
+    git \ 
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Gephi
+RUN wget -O /tmp/gephi.tar.gz https://github.com/gephi/gephi/releases/download/v0.9.2/gephi-0.9.2-linux.tar.gz \
+    && mkdir /opt/gephi \
+    && tar -xzvf /tmp/gephi.tar.gz -C /opt/gephi \
+    && rm /tmp/gephi.tar.gz
+
+# Set environment variable for Gephi
+ENV PATH="/opt/gephi/bin:$PATH"
+
+# Upgrade pip to the latest version
+RUN pip install --no-cache-dir --upgrade pip
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements.txt to the container
+COPY ./requirements.txt /app
+
+# Install Python dependencies from requirements.txt
+RUN pip install -r /app/requirements.txt
+
+# Hack to resolve tensorflow-io issue
+RUN pip install --no-cache-dir jupyter
+
+# Set environment variable for PYTHONPATH
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+
+# Expose necessary ports for Jupyter and VNC
+EXPOSE 8888 5901 6080
+
+# Start Gephi (VNC setup) and Jupyter
+CMD ["bash", "-c", "xvfb-run -n 99 -s '-screen 0 1024x768x24' x11vnc -forever -create & jupyter lab --ip=0.0.0.0 --no-browser --allow-root"]

@@ -1,0 +1,23 @@
+ services:
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.gpu
+    tty: true
+    volumes:
+      - .:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+        - "$JUPYTER_PORT:$JUPYTER_PORT"
+        - "$TENSORBOARD_PORT:$TENSORBOARD_PORT"
+        - "$GEPHI_PORT:$GEPHI_PORT"
+    env_file:
+     - ./.env
+    entrypoint: ["bash", "-c", "jupyter notebook --ip=0.0.0.0 --port=$JUPYTER_PORT --no-browser --allow-root"]
+    
